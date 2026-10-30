@@ -8,13 +8,13 @@ noncomputable section
 section MoreGeneral
 
 -- @[to_additive]  -- (to_additive gives an error for now; to be investigated.)
-structure Group.FinitePresentation {G α : Type*}
-    [Finite α] [Group G] where
-  π : FreeGroup α →* G
-  rels : Set (FreeGroup α)
+structure AddGroup.FinitePresentation {G α : Type*}
+    [Finite α] [AddGroup G] where
+  π : FreeAddGroup α →+ G
+  rels : Set (FreeAddGroup α)
   surj : Function.Surjective π
   rels_finite : rels.Finite
-  π_ker : π.ker = Subgroup.normalClosure rels
+  π_ker : π.ker = AddSubgroup.normalClosure rels
 
 variable {n m : Type*} [DecidableEq n] [Fintype n] [DecidableEq m] [Fintype m]
   (l : m → FreeAddGroup n)
