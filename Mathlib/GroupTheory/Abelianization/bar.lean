@@ -24,15 +24,7 @@ variable {n m : Type*} [DecidableEq n] [Fintype n] [DecidableEq m] [Fintype m]
 #check PresentedAddGroup (Set.range l : Set (FreeAddGroup n))
 
 def relatorMatrix : Matrix n m ℤ :=
-  .of fun i j ↦ by
-    -- We want the "total power" (i.e., sum) of `i` in `l.get j`
-    let w := l j
-    -- Map the ith generator to 1 and all others to 0, then use the universal property!
-    let f : n →  ℤ :=
-      fun k => if k = i then 1 else  0
-    let totalPowerHom := FreeAddGroup.lift f
-    exact Multiplicative.toAdd (totalPowerHom w)
-
+  .of fun i j ↦ FreeAddGroup.lift (fun k ↦ (Pi.single k 1 : n → ℤ)) (l j) i
 
 -- test cases
 def x : FreeAddGroup (Fin 2) := FreeAddGroup.of 0
@@ -46,41 +38,39 @@ def testRelations : Fin 2 → FreeAddGroup (Fin 2)
 open QuotientGroup
 
 def key' :
-    Abelianization (PresentedAddGroup (Set.range l : Set (FreeAddGroup n)))) ≃+
-      (n → ℤ) ⧸ (relatorMatrix l).toLin'.range.toAddSubgroup := by
+    AddAbelianization (PresentedAddGroup (Set.range l : Set (FreeAddGroup n))) ≃+
+      (n → ℤ) ⧸ (relatorMatrix l).toLin'.range := by
   let F := FreeAddGroup n
   let R : Set F := Set.range l
 
   --  map from `F` to `Multiplicative ℤ^n ⧸ relatorMatrix` that descends to our required map
-  let freeToCoker : F →* Multiplicative ((n → ℤ) ⧸ (relatorMatrix l).toLin'.range.toAddSubgroup) :=
-    FreeGroup.lift fun i ↦ Multiplicative.ofAdd (Submodule.Quotient.mk (Pi.single i 1))
+  let freeToCoker : F →+ (n → ℤ) ⧸ (relatorMatrix l).toLin'.range.toAddSubgroup :=
+    FreeAddGroup.lift fun i ↦ Submodule.Quotient.mk (Pi.single i 1)
 
   -- Prove relators map to identity for the descent.
-  have h_relators (r : F) (hr : r ∈ R) : freeToCoker r = 1 := by
+  have h_rels (r : F) (hr : r ∈ R) : freeToCoker r = 0 := by
     rcases hr with ⟨j, rfl⟩
     unfold freeToCoker
-    apply_fun Multiplicative.toAdd
-    dsimp
     sorry
 
   -- Forward additive map
-  let presentationToCoker : Additive (Abelianization (PresentedGroup R)) →+
+  let presentationToCoker : AddAbelianization (PresentedAddGroup R) →+
       (n → ℤ) ⧸ (relatorMatrix l).toLin'.range.toAddSubgroup :=
-    (Abelianization.lift (PresentedGroup.toGroup h_relators)).toAdditive
+    (AddAbelianization.lift (PresentedAddGroup.toAddGroup h_rels))
 
   -- ℤ-linear map from ℤ^n ⧸ `relatorMatrix` to the abelianized presentation
-  let φ : (n → ℤ) →ₗ[ℤ] Additive (Abelianization (PresentedGroup R)) :=
-    Fintype.linearCombination ℤ fun i ↦ Additive.ofMul (Abelianization.of (PresentedGroup.of i))
+  let φ : (n → ℤ) →ₗ[ℤ] AddAbelianization (PresentedAddGroup R) :=
+    Fintype.linearCombination ℤ fun i ↦ AddAbelianization.of (PresentedAddGroup.of i)
 
   have h_range : (relatorMatrix l).toLin'.range ≤ φ.ker := by
     sorry
 
   -- Backward linear map
   let CokertoPresentationLin : (n → ℤ) ⧸ (relatorMatrix l).toLin'.range →ₗ[ℤ]
-      Additive (Abelianization (PresentedGroup R)) :=
+      AddAbelianization (PresentedAddGroup R) :=
     (relatorMatrix l).toLin'.range.liftQ φ h_range
 
-  let linEquiv : Additive (Abelianization (PresentedGroup R)) ≃ₗ[ℤ]
+  let linEquiv : AddAbelianization (PresentedAddGroup R) ≃ₗ[ℤ]
       (n → ℤ) ⧸ (relatorMatrix l).toLin'.range :=
     LinearEquiv.ofLinearMap
       presentationToCoker.toIntLinearMap
