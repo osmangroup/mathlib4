@@ -29,25 +29,26 @@ assert_not_exists Cardinal Field
 
 universe u v w
 
--- Let G be a group.
+-- Let G be a group and A an additive group.
 variable (G : Type u) [Group G]
+variable (A : Type u) [AddGroup A]
 
 open Subgroup (centralizer)
 
 open scoped IsMulCommutative in
+/-- The abelianization of the additive group A is the quotient of A by its commutator subgroup. -/
+def AddAbelianization : Type u :=
+  A ⧸ addCommutator A
+deriving AddCommGroup
+
+open scoped IsMulCommutative in
 /-- The abelianization of the group G is the quotient of G by its commutator subgroup. -/
-@[to_additive AddAbelianization /-- The abelianization of the additive group G is the quotient of G
-by its commutator subgroup. -/]
+@[to_additive existing AddAbelianization]
 def Abelianization : Type u :=
   G ⧸ commutator G
 deriving CommGroup
--- Manual setup for AddAbelianization
-instance (G : Type u) [AddGroup G] : AddCommGroup (AddAbelianization G) where
-  toAddGroup := QuotientAddGroup.Quotient.addGroup (addCommutator G)
-  add_comm := by
-    have h : IsAddCommutative (G ⧸ addCommutator G) :=
-      AddSubgroup.Normal.quotient_commutative_iff_addCommutator_le.mpr le_rfl
-    exact h.is_comm.1
+
+-- Register the derived instances as additive/multiplicative counterparts.
 attribute [to_additive existing instAddCommGroupAddAbelianization] instCommGroupAbelianization
 
 namespace Abelianization
@@ -57,9 +58,10 @@ instance : Inhabited (Abelianization G) :=
 
 variable {G}
 
+
 /-- `of` is the canonical projection from the group G to its abelianization. -/
-@[to_additive /-- `of` is the canonical projection from the additive group G to its abelianization.
--/]
+@[to_additive
+/-- `of` is the canonical projection from the additive group G to its abelianization.-/]
 def of : G →* Abelianization G where
   toFun := QuotientGroup.mk
   map_one' := rfl
@@ -90,8 +92,10 @@ theorem commutator_le_ker : commutator G ≤ f.ker := by
 @[deprecated (since := "2026-10-17")] alias commutator_subset_ker := commutator_le_ker
 
 /-- If `f : G → A` is a group homomorphism to an abelian group, then `lift f` is the unique map
-  from the abelianization of a `G` to `A` that factors through `f`. -/
-@[to_additive]
+  from the abelianization of `G` to `A` that factors through `f`. -/
+@[to_additive
+/-- If `f : G → A` is an additive group homomorphism to an abelian group, then `lift f` is the
+unique map from the abelianization of `G` to `A` that factors through `f`. -/]
 def lift : (G →* A) ≃ (Abelianization G →* A) where
   toFun f := QuotientGroup.lift _ f fun _ h => MonoidHom.mem_ker.2 <| commutator_le_ker _ h
   invFun F := F.comp of
@@ -200,7 +204,8 @@ theorem abelianizationCongr_trans {I : Type v} [Group I] (e : G ≃* H) (e₂ : 
 end AbelianizationCongr
 
 /-- An Abelian group is equivalent to its own abelianization. -/
-@[to_additive /-- An additive Abelian group is equivalent to its own abelianization. -/]
+@[to_additive (attr := simps)
+/-- An additive Abelian group is equivalent to its own abelianization. -/]
 def Abelianization.equivOfComm {H : Type*} [CommGroup H] : H ≃* Abelianization H :=
   { Abelianization.of with
     toFun := Abelianization.of
