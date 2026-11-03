@@ -43,51 +43,40 @@ def key' :
   let F := FreeAddGroup n
   let R : Set F := Set.range l
   let S := LinearMap.range (relatorMatrix l).toLin'
-
   -- The abelianization map sending each generator of `F` to its corresponding unit vector
   let ab : F →+ (n → ℤ) := FreeAddGroup.lift fun i ↦ Pi.single i 1
-
   -- column j of `relatorMatrix l` is ab (l j)
   have h_col (j : m) : (relatorMatrix l).toLin' (Pi.single j 1) = ab (l j) := by
     ext i
-    simp only [relatorMatrix, Matrix.toLin'_apply, Matrix.mulVec_single, MulOpposite.op_one,
-      Pi.smul_apply, Matrix.col_apply, Matrix.of_apply, one_smul, ab]
-
+    simp [Matrix.toLin'_apply, relatorMatrix, ab]
   -- map from `F` to `ℤ^n ⧸ S` that descends to the isomorphism
   let freeToCoker : F →+ (n → ℤ) ⧸ S :=
     FreeAddGroup.lift fun i ↦ Submodule.Quotient.mk (Pi.single i 1)
-
   -- Decompose `freeToCoker` into `S.mkQ ∘ ab`
   have h_fac (x : F) : freeToCoker x = Submodule.Quotient.mk (ab x) := by
     have : freeToCoker = S.mkQ.toAddMonoidHom.comp ab := by
       ext i
-      simp only [FreeAddGroup.lift_apply_of, AddMonoidHom.coe_comp, LinearMap.toAddMonoidHom_coe,
-        Function.comp_apply, Submodule.mkQ_apply, freeToCoker, ab]
+      simp [freeToCoker, ab]
     rw [this]
     rfl
-
   -- Relators map to `0` under `freeToCoker`
   have h_rels (r : F) (hr : r ∈ R) : freeToCoker r = 0 := by
     rcases hr with ⟨j, rfl⟩
     rw [h_fac, Submodule.Quotient.mk_eq_zero, ← h_col]
     exact LinearMap.mem_range_self _ _
-
   -- The isomorphism form `F` to `ℤ^n ⧸ S`
   let presentationToCoker : AddAbelianization (PresentedAddGroup R) →+ (n → ℤ) ⧸ S :=
     AddAbelianization.lift (PresentedAddGroup.toAddGroup h_rels)
-
+  -- `ℤ`-linear map from `ℤ^n` to the abelianization that descends to the inverse of `freeToCoker`
   let φ : (n → ℤ) →ₗ[ℤ] AddAbelianization (PresentedAddGroup R) :=
     Fintype.linearCombination ℤ fun i ↦ AddAbelianization.of (PresentedAddGroup.of i)
-
-  -- φ ∘ ab = of ∘ mk
-  have h_φab (x : F) :
-      φ (ab x) = AddAbelianization.of (PresentedAddGroup.mk R x) := by
-    have : φ.toAddMonoidHom.comp ab =
-        AddAbelianization.of.comp (PresentedAddGroup.mk R) := by
+  -- `φ ∘ ab = of ∘ mk`
+  have h_φab (x : F) : φ (ab x) = AddAbelianization.of (PresentedAddGroup.mk R x) := by
+    have : φ.toAddMonoidHom.comp ab = AddAbelianization.of.comp (PresentedAddGroup.mk R) := by
       ext i
-      simp [φ, ab, Fintype.linearCombination_apply_single]; rfl
+      simp [φ, ab, Fintype.linearCombination_apply_single]
+      rfl
     exact DFunLike.congr_fun this x
-
   have h_range : S ≤ LinearMap.ker φ := by
     rw [LinearMap.range_le_ker_iff]
     ext j
@@ -96,22 +85,25 @@ def key' :
     -- relator is zero in the presented group
     have : PresentedAddGroup.mk R (l j) = 0 :=
       (QuotientAddGroup.eq_zero_iff _).mpr (AddSubgroup.subset_normalClosure ⟨j, rfl⟩)
-    simp [this]
-
-  let CokertoPresentationLin : (n → ℤ) ⧸ S →ₗ[ℤ] AddAbelianization (PresentedAddGroup R) :=
+    simp only [this, map_zero]
+  -- The inverse of `presentationToCoker` as a `ℤ`-linear map
+  let cokerToPresentationLin : (n → ℤ) ⧸ S →ₗ[ℤ] AddAbelianization (PresentedAddGroup R) :=
     S.liftQ φ h_range
-
-  exact AddMonoidHom.toAddEquiv presentationToCoker CokertoPresentationLin.toAddMonoidHom
-    (by -- back ∘ forth = id on the abelianized presentation
+  -- Establishing the isomorphism
+  exact AddMonoidHom.toAddEquiv presentationToCoker cokerToPresentationLin.toAddMonoidHom
+    (by
       apply AddAbelianization.hom_ext
       apply PresentedAddGroup.ext
       intro i
-      simp [presentationToCoker, CokertoPresentationLin, φ, freeToCoker,
+      simp [presentationToCoker, cokerToPresentationLin, φ, freeToCoker,
         Fintype.linearCombination_apply_single])
-    (by -- forth ∘ back = id on the cokernel
-      ext i   -- quotient ext, then pi ext, then ℤ ext: reduces to mk (single i 1)
-      simp [presentationToCoker, CokertoPresentationLin, φ]
-      sorry)
+    (by
+      have key : presentationToCoker.comp φ.toAddMonoidHom = S.mkQ.toAddMonoidHom := by
+        ext i
+        simp [presentationToCoker, φ, freeToCoker]
+      ext x
+      obtain ⟨v, rfl⟩ := Submodule.Quotient.mk_surjective S x
+      simpa [cokerToPresentationLin] using DFunLike.congr_fun key v)
 
 end MoreGeneral
 
