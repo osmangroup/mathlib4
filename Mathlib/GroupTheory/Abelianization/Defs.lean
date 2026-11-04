@@ -37,7 +37,8 @@ open Subgroup (centralizer)
 namespace Group
 
 /-- The abelianization of the group `G` is the quotient of `G` by its commutator subgroup. -/
-@[to_additive]
+@[to_additive /-- The abelianization of the additive group `G` is the quotient of `G` by its
+commutator subgroup. -/]
 def Abelianization : Type u :=
   G ⧸ commutator G
 
